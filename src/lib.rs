@@ -7,7 +7,7 @@ fn get_client_num() -> Option<u32> {
         .ok()?
         .parse()
         .ok()
-        .filter(|&n| n > 0)
+        .filter(|&n| n > 1)
 }
 
 unsafe fn safe_write<T>(addr: usize, data: &T) -> bool {

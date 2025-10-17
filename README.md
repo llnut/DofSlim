@@ -97,7 +97,7 @@ This project uses LD_PRELOAD hooking to dynamically patch the following hardcode
 
     📝 Recommended values:
 
-        Single-person server: 1
+        Single-person server: 2
         Small server: 10 or 20
         Medium server: 256
         Full compatibility: 1000
@@ -105,7 +105,7 @@ This project uses LD_PRELOAD hooking to dynamically patch the following hardcode
 ## 🔒 Safety Notes
 
 1. If DF_CLIENT_NUM is unset or invalid, the program falls back to 1000 and behaves identically to the original.
-2. Tested and stable for values from 1 to 1000.
+2. Tested and stable for values from 2 to 1000.
 
 ## 📄 License
 
