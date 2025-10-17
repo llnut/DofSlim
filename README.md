@@ -4,6 +4,10 @@ Dynamically reduce server memory usage by replacing the hardcoded 1000 client li
 
 Saves over 2.5 GB of memory for df_bridge_r and df_channel_r services.
 
+## Why "DofSlim"?
+
+The name `DofSlim` is a portmanteau. The capital 'S' directly denotes **S**erver. Combined with `Slim`, it encapsulates the project's mission to reduce the memory footprint of the Dof server, effectively making it "slim".
+
 ## 📌 Background
 
 The original df_bridge_r and df_channel_r binaries statically allocate memory for 1000 client objects at startup (each approximately 1.25 MB in size). Even if your actual concurrent connections are far fewer (e.g., dozens or hundreds), the program still reserves 1.3–2.5 GB of virtual memory, leading to significant resource waste.
@@ -35,7 +39,7 @@ This project uses LD_PRELOAD hooking to dynamically patch the following hardcode
 
     ```bash
     # Clone the repository
-    git clone https://github.com/llnut/dof-memory-hook.git
+    git clone https://github.com/llnut/DofSlim.git
     cd DofSlim
 
     # Build the 32-bit shared library for df_bridge_r
