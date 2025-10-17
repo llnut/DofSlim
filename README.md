@@ -2,7 +2,7 @@
 
 Dynamically reduce server memory usage by replacing the hardcoded 1000 client limit with a runtime configurable value (e.g., 64 or 128).
 
-Saves over 2.6 GB of memory for df_bridge_r and df_channel_r services.
+Saves over 2.5 GB of memory for df_bridge_r and df_channel_r services.
 
 ## 📌 Background
 
@@ -20,15 +20,15 @@ This project uses LD_PRELOAD hooking to dynamically patch the following hardcode
     ✅ Supports df_bridge_r and df_channel_r
     ✅ Safe patching: Only modifies constants directly related to client count
     ✅ Significant memory reduction:
-        DF_CLIENT_NUM=1 → saves ~2.6 GB physical memory
+        DF_CLIENT_NUM=3 → saves ~2.5 GB physical memory
     ✅ Overflow-safe: Uses saturating_sub to prevent crashes when client_num = 0
 
 ## 🛠️ Building
 
 * Prerequisites
 
-    Rust toolchain (rustc >= 1.70)
-    cargo
+    Rust toolchain (rustc >= 1.70)  
+    cargo  
     Target system: 32-bit Linux (original binaries are elf32-i386)
 
 * Steps
@@ -36,7 +36,7 @@ This project uses LD_PRELOAD hooking to dynamically patch the following hardcode
     ```bash
     # Clone the repository
     git clone https://github.com/llnut/dof-memory-hook.git
-    cd dof-memory-hook
+    cd DofSlim
 
     # Build the 32-bit shared library for df_bridge_r
     cargo build --release --target i686-unknown-linux-gnu --features bridge
@@ -97,7 +97,7 @@ This project uses LD_PRELOAD hooking to dynamically patch the following hardcode
 
     📝 Recommended values:
 
-        Single-person server: 2
+        Single-person server: 3
         Small server: 10 or 20
         Medium server: 256
         Full compatibility: 1000
@@ -105,7 +105,7 @@ This project uses LD_PRELOAD hooking to dynamically patch the following hardcode
 ## 🔒 Safety Notes
 
 1. If DF_CLIENT_NUM is unset or invalid, the program falls back to 1000 and behaves identically to the original.
-2. Tested and stable for values from 2 to 1000.
+2. Tested and stable for values from 3 to 1000.
 
 ## 📄 License
 
