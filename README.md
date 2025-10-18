@@ -6,7 +6,7 @@ Saves over 2.5 GB of memory for df_bridge_r and df_channel_r services.
 
 ## Why "DofSlim"?
 
-The name `DofSlim` is a portmanteau. The capital 'S' directly denotes **S**erver. Combined with `Slim`, it encapsulates the project's mission to reduce the memory footprint of the Dof server, effectively making it "slim".
+The name **DofSlim** is a portmanteau. The capital **S** directly denotes **Server**. Combined with **Slim**, it encapsulates the project's mission to reduce the memory footprint of the Dof server, effectively making it "slim".
 
 ## 📌 Background
 
