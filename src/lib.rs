@@ -3,7 +3,7 @@ use libc::{_SC_PAGESIZE, PROT_EXEC, PROT_READ, PROT_WRITE, c_void, memcpy, mprot
 use std::env;
 
 fn get_client_num() -> Option<u32> {
-    env::var("DF_CLIENT_NUM")
+    env::var("CLIENT_POOL_SIZE")
         .ok()?
         .parse()
         .ok()
@@ -42,7 +42,7 @@ fn hook_channel() {
         safe_write(0x080538A4, &client_num); // 4 bytes
         safe_write(0x08053964, &for_num); // 4 bytes
     }
-    eprintln!("[df_channel_hook] Patched client limit to {}", client_num);
+    eprintln!("[df_channel_hook] Patched client pool size to {}", client_num);
 }
 
 #[cfg(feature = "bridge")]
@@ -62,5 +62,5 @@ fn hook_bridge() {
         safe_write(0x0805829E, &client_num); // 4 bytes
         safe_write(0x0805835E, &for_num); // 4 bytes
     }
-    eprintln!("[df_bridge_hook] Patched client limit to {}", client_num);
+    eprintln!("[df_bridge_hook] Patched client pool size to {}", client_num);
 }

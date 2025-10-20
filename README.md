@@ -1,6 +1,6 @@
 # DofSlim
 
-Dynamically reduce server memory usage by replacing the hardcoded 1000 client limit with a runtime configurable value (e.g., 64 or 128).
+Dynamically reduce server memory usage by replacing the hardcoded 1000 client pool size with a runtime configurable value (e.g., 64 or 128).
 
 Saves over 2.5 GB of memory for df_bridge_r and df_channel_r services.
 
@@ -14,17 +14,17 @@ The original df_bridge_r and df_channel_r binaries statically allocate memory fo
 
 This project uses LD_PRELOAD hooking to dynamically patch the following hardcoded constants before the program starts:
 
-    Client count limit: 1000 → custom_value
+    Client pool size: 1000 → custom_value
     Loop boundary: 999 → custom_value - 1
     Memory offset calculation: 4 + 0x140060 * 1000 → 4 + 0x140060 * custom_value
 
 ## 🚀 Features
 
-    ✅ Runtime-configurable client limit via DF_CLIENT_NUM environment variable (default: 1000)
+    ✅ Runtime-configurable client pool size via CLIENT_POOL_SIZE environment variable (default: 1000)
     ✅ Supports df_bridge_r and df_channel_r
     ✅ Safe patching: Only modifies constants directly related to client count
     ✅ Significant memory reduction:
-        DF_CLIENT_NUM=3 → saves ~2.5 GB physical memory
+        CLIENT_POOL_SIZE=3 → saves ~2.5 GB physical memory
     ✅ Overflow-safe: Uses saturating_sub to prevent crashes when client_num = 0
 
 ## 🛠️ Building
@@ -60,11 +60,11 @@ This project uses LD_PRELOAD hooking to dynamically patch the following hardcode
     ```
 
 ## ▶️ Usage
-1. Set client limit (optional)
+1. Set client pool size (optional)
 
     ```bash
     # Default is 1000; adjust based on your needs
-    export DF_CLIENT_NUM=64   # or 128, 256, etc.
+    export CLIENT_POOL_SIZE=64   # or 128, 256, etc.
     ```
 
 2. Launch services with LD_PRELOAD
@@ -82,8 +82,8 @@ This project uses LD_PRELOAD hooking to dynamically patch the following hardcode
     Check stderr output:
 
     ```text
-    [df_bridge_hook] Patched client limit to 64
-    [df_channel_hook] Patched client limit to 64
+    [df_bridge_hook] Patched client pool size to 64
+    [df_channel_hook] Patched client pool size to 64
     ```
 
     Monitor memory usage (compare with unpatched version):
@@ -97,7 +97,7 @@ This project uses LD_PRELOAD hooking to dynamically patch the following hardcode
 
 |Variable|Description|Default|
 |---|---|---|
-|DF_CLIENT_NUM|Maximum number of concurrent clients|1000|
+|CLIENT_POOL_SIZE|Maximum number of concurrent clients|1000|
 
     📝 Recommended values:
 
@@ -108,7 +108,7 @@ This project uses LD_PRELOAD hooking to dynamically patch the following hardcode
 
 ## 🔒 Safety Notes
 
-1. If DF_CLIENT_NUM is unset or invalid, the program falls back to 1000 and behaves identically to the original.
+1. If CLIENT_POOL_SIZE is unset or invalid, the program falls back to 1000 and behaves identically to the original.
 2. Tested and stable for values from 3 to 1000.
 
 ## 📄 License
