@@ -1,66 +1,99 @@
-use ctor::ctor;
-use libc::{_SC_PAGESIZE, PROT_EXEC, PROT_READ, PROT_WRITE, c_void, memcpy, mprotect, sysconf};
+//! LD_PRELOAD library that shrinks the 1000-slot `TCPUser` pool in
+//! `df_channel_r` and `df_bridge_r` to a runtime-configurable size.
+
+mod patch;
+mod targets;
+
 use std::env;
 
-fn get_client_num() -> Option<u32> {
-    env::var("CLIENT_POOL_SIZE")
-        .ok()?
-        .parse()
-        .ok()
-        .filter(|&n| n > 2)
+use ctor::ctor;
+
+use crate::patch::{read_u32, write_u32};
+use crate::targets::{ORIGINAL_POOL_SIZE, TARGETS, Target};
+
+const ENV_POOL_SIZE: &str = "CLIENT_POOL_SIZE";
+const MIN_POOL_SIZE: u32 = 3;
+const LOG_TAG: &str = "[dofslim]";
+
+enum PoolSizeInput {
+    Unset,
+    Invalid(String),
+    Valid(u32),
 }
 
-unsafe fn safe_write<T>(addr: usize, data: &T) -> bool {
-    let size = std::mem::size_of::<T>();
-    let pagesize = unsafe { sysconf(_SC_PAGESIZE) as usize };
-    let page_start = addr & !(pagesize - 1);
-    let page_ptr = page_start as *mut c_void;
-    unsafe {
-        if mprotect(page_ptr, pagesize, PROT_READ | PROT_WRITE | PROT_EXEC) != 0 {
-            eprintln!("hook failed: mprotect failed at page {:x}", page_start);
-            return false;
+fn read_pool_size() -> PoolSizeInput {
+    let raw = match env::var(ENV_POOL_SIZE) {
+        Ok(s) => s,
+        Err(_) => return PoolSizeInput::Unset,
+    };
+    match raw.parse::<u32>() {
+        Ok(n) if (MIN_POOL_SIZE..=ORIGINAL_POOL_SIZE).contains(&n) => PoolSizeInput::Valid(n),
+        _ => PoolSizeInput::Invalid(raw),
+    }
+}
+
+fn detect_target() -> Option<&'static Target> {
+    let exe = env::current_exe().ok()?;
+    let name = exe.file_name()?.to_str()?;
+    TARGETS.iter().find(|t| t.name == name)
+}
+
+/// # Safety
+/// Must run before any application thread starts; calling from `#[ctor]`
+/// satisfies this.
+unsafe fn apply(target: &Target, pool_size: u32) {
+    let mut applied = 0usize;
+    for patch in target.patches {
+        let expected = patch.kind.compute(ORIGINAL_POOL_SIZE);
+        let actual = unsafe { read_u32(patch.addr) };
+        if actual != expected {
+            eprintln!(
+                "{LOG_TAG} {} skip {:#010x}: expected {:#x}, found {:#x}",
+                target.name, patch.addr, expected, actual
+            );
+            continue;
         }
-        memcpy(addr as *mut c_void, data as *const T as *const c_void, size);
+        let new_value = patch.kind.compute(pool_size);
+        match unsafe { write_u32(patch.addr, new_value) } {
+            Ok(()) => applied += 1,
+            Err(err) => eprintln!(
+                "{LOG_TAG} {} patch {:#010x} failed: {}",
+                target.name, patch.addr, err
+            ),
+        }
     }
-    true
+    eprintln!(
+        "{LOG_TAG} {}: {}/{} patches applied, pool_size={}",
+        target.name,
+        applied,
+        target.patches.len(),
+        pool_size,
+    );
 }
 
-#[cfg(feature = "channel")]
 #[ctor]
-fn hook_channel() {
-    let client_num = get_client_num().unwrap_or(1000);
-    if client_num == 1000 {
+fn dofslim_init() {
+    // Silent when preloaded into an unrelated process.
+    let Some(target) = detect_target() else {
         return;
-    }
-    let val: u32 = 4 + 0x140060u32 * client_num;
-    let for_num = client_num - 1;
-
-    unsafe {
-        safe_write(0x0805380D, &val); // 4 bytes
-        safe_write(0x0805381C, &client_num); // 4 bytes
-        safe_write(0x08053829, &for_num); // 4 bytes
-        safe_write(0x080538A4, &client_num); // 4 bytes
-        safe_write(0x08053964, &for_num); // 4 bytes
-    }
-    eprintln!("[df_channel_hook] Patched client pool size to {}", client_num);
-}
-
-#[cfg(feature = "bridge")]
-#[ctor]
-fn hook_bridge() {
-    let client_num = get_client_num().unwrap_or(1000);
-    if client_num == 1000 {
-        return;
-    }
-    let val: u32 = 4 + 0x140060u32 * client_num;
-    let for_num = client_num - 1;
-
-    unsafe {
-        safe_write(0x08058207, &val); // 4 bytes
-        safe_write(0x08058216, &client_num); // 4 bytes
-        safe_write(0x08058223, &for_num); // 4 bytes
-        safe_write(0x0805829E, &client_num); // 4 bytes
-        safe_write(0x0805835E, &for_num); // 4 bytes
-    }
-    eprintln!("[df_bridge_hook] Patched client pool size to {}", client_num);
+    };
+    let pool_size = match read_pool_size() {
+        PoolSizeInput::Unset => {
+            eprintln!(
+                "{LOG_TAG} {}: {} not set, no patch applied",
+                target.name, ENV_POOL_SIZE
+            );
+            return;
+        }
+        PoolSizeInput::Invalid(raw) => {
+            eprintln!(
+                "{LOG_TAG} {}: {}={:?} outside [{}, {}], no patch applied",
+                target.name, ENV_POOL_SIZE, raw, MIN_POOL_SIZE, ORIGINAL_POOL_SIZE
+            );
+            return;
+        }
+        PoolSizeInput::Valid(n) if n == ORIGINAL_POOL_SIZE => return,
+        PoolSizeInput::Valid(n) => n,
+    };
+    unsafe { apply(target, pool_size) };
 }
